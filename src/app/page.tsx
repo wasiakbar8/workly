@@ -14,6 +14,8 @@ import HomeCTAActions from "@/components/home/HomeCTAActions";
 import { getCategories } from "@/services/categoriesService";
 import { getFeaturedWorkers } from "@/services/workersService";
 
+export const dynamic = "force-dynamic";
+
 const iconMap: Record<string, React.ElementType> = {
   Home, Laptop, Sparkles, Wrench, Truck, GraduationCap,
   PartyPopper, Sparkle, HardHat, Palette, Briefcase, Heart,
