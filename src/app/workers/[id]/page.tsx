@@ -2,7 +2,7 @@
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import {
   MapPin, CheckCircle, Clock, Briefcase, Globe, Star, MessageSquare, Heart, Navigation
 } from "lucide-react";
@@ -20,7 +20,7 @@ import { isWorkerSaved, saveWorker, unsaveWorker } from "@/services/savedWorkers
 import { useAuth } from "@/context/AuthContext";
 import { WorkerProfile, Review } from "@/types";
 
-export default function WorkerProfilePage() {
+function WorkerProfileContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -398,5 +398,20 @@ export default function WorkerProfilePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function WorkerProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-7xl mx-auto px-4 py-12 text-center text-ink-secondary">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm">Loading worker profile...</p>
+        </div>
+      }
+    >
+      <WorkerProfileContent />
+    </Suspense>
   );
 }

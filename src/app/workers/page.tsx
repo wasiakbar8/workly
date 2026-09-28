@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Search, SlidersHorizontal, MapPin, Navigation, Users } from "lucide-react";
 import WorkerCard from "@/components/workers/WorkerCard";
@@ -29,7 +29,7 @@ const distanceOptions = [
   { label: "Within 50 km", value: 50 },
 ];
 
-export default function WorkersPage() {
+function WorkersContent() {
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category") || "";
 
@@ -295,5 +295,20 @@ export default function WorkersPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function WorkersPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-7xl mx-auto px-4 py-12 text-center text-ink-secondary">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm">Loading workers...</p>
+        </div>
+      }
+    >
+      <WorkersContent />
+    </Suspense>
   );
 }
