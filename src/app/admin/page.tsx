@@ -62,19 +62,30 @@ export default function AdminPage() {
     );
   }
 
+  if (role !== "admin") {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-20 text-center">
+        <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+          <ShieldAlert className="w-8 h-8 text-danger" />
+        </div>
+        <h1 className="text-2xl font-bold text-ink mb-2">403 - Access Denied</h1>
+        <p className="text-ink-secondary mb-6">
+          You do not have administrative privileges to view or manage this portal.
+        </p>
+        <div className="flex justify-center gap-4">
+          <Link href="/dashboard">
+            <Button variant="outline">Go to Dashboard</Button>
+          </Link>
+          <Link href="/login">
+            <Button>Log in as Admin</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-      {/* Role Notice */}
-      {role !== "admin" && (
-        <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-ink">
-            <ShieldAlert className="text-warning shrink-0" size={18} />
-            <span>You are currently viewing the admin panel as <strong>{user?.fullName || "Guest"}</strong> (Role: {role || "unauthenticated"}). Log in as <code>admin@workly.com</code> for full administrative access.</span>
-          </div>
-          <Link href="/login"><Button size="sm" variant="outline">Log in as Admin</Button></Link>
-        </div>
-      )}
-
       <h1 className="text-2xl font-bold text-ink mb-6">Admin Dashboard</h1>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

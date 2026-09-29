@@ -8,18 +8,42 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  // Fast path: if no supabase cookies exist, skip external auth network call
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error(
+      "Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be defined."
+    );
+  }
+
+  const pathname = request.nextUrl.pathname;
+
+  // Protected route definitions
+  const isAdminRoute = pathname.startsWith("/admin");
+  const isWorkerRoute = pathname.startsWith("/worker-dashboard");
+  const isAuthRequiredRoute =
+    isAdminRoute ||
+    isWorkerRoute ||
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/bookings") ||
+    pathname.startsWith("/messages") ||
+    pathname.startsWith("/notifications") ||
+    pathname.startsWith("/post-task");
+
   const hasAuthCookie = request.cookies.getAll().some((c) => c.name.includes("-auth-token"));
-  if (!hasAuthCookie) {
+
+  // Fast path: if not a protected route and no auth cookies exist, skip Supabase network call
+  if (!isAuthRequiredRoute && !hasAuthCookie) {
     return response;
   }
 
-  const DEFAULT_SUPABASE_URL = "https://rabrxxrmphfpoyfurlbs.supabase.co";
-  const DEFAULT_SUPABASE_ANON_KEY =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhYnJ4eHJtcGhmcG95ZnVybGJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NzQ2ODgsImV4cCI6MjEwNjE1MDY4OH0.eehB-jRWcmD5n1hhp8Gz1xA4hUwFWxvo5MvJot5Uuuo";
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
+  // Fast redirect for unauthenticated users accessing protected routes without auth cookies
+  if (isAuthRequiredRoute && !hasAuthCookie) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
@@ -47,7 +71,37 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  await supabase.auth.getUser();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (isAuthRequiredRoute && (!user || authError)) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Check role-based route access from database (profiles table)
+  if (user && (isAdminRoute || isWorkerRoute)) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const role = profile?.role;
+
+    if (isAdminRoute && role !== "admin") {
+      // Non-admins attempting to access /admin are redirected to /dashboard with forbidden notice
+      const redirectUrl = new URL("/dashboard", request.url);
+      redirectUrl.searchParams.set("error", "unauthorized_admin_access");
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    if (isWorkerRoute && role !== "worker" && role !== "admin") {
+      // Non-workers attempting to access /worker-dashboard are redirected to /become-worker
+      const becomeWorkerUrl = new URL("/become-worker", request.url);
+      return NextResponse.redirect(becomeWorkerUrl);
+    }
+  }
 
   return response;
 }
